@@ -15,7 +15,7 @@ def sortBBox(listboxmax,listboxmin):
                 temp1 = listboxmin[j]
                 listboxmin[j] = listboxmin[j+1]
                 listboxmin[j+1] = temp1
-    return listboxmin, listboxmin
+    return listboxmax, listboxmin
 
 def padding(bin):
     #bottom
@@ -63,7 +63,7 @@ def drawBoundingbox(image,contours):
     for i in contours:
         image = cv2.rectangle(image, i[0], i[1], (255,0,0), 1)
     return image
-def removeBadContours(oriImg,image,listboxmax,listboxmin):
+def removeBadContours(filename,oriImg,image,listboxmax,listboxmin):
     area = []
     areaHeight = []
     areaWidth = []
@@ -139,31 +139,28 @@ def removeBadContours(oriImg,image,listboxmax,listboxmin):
             Img4= oriImg[bettetContours[i][0][1]:bettetContours[i][1][1],bettetContours[i][0][0]:bettetContours[i][1][0]]
             cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',Img4)  
             id+=1   
-    return bettetContours,multiChar1
-    
-            
-for filename in os.listdir('/home/anlab/ANLAB/VisualCode/Contours/TestImage/InputSerialNum'):
-    image = cv2.imread('/home/anlab/ANLAB/VisualCode/Contours/TestImage/InputSerialNum/' + filename)
-    image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
-    SerialNo = image
-    SerialGray = coverGreemColorToWhiteColor(SerialNo)
-    SerialGray = cv2.cvtColor(SerialGray, cv2.COLOR_BGR2GRAY)
+    return bettetContours
+def splitCharFromSerialNo(path):
+    for filename in os.listdir(path):
+        image = cv2.imread(path + filename)
+        image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+        SerialNo = image
+        SerialGray = coverGreemColorToWhiteColor(SerialNo)
+        SerialGray = cv2.cvtColor(SerialGray, cv2.COLOR_BGR2GRAY)
+        # Inverse 
+        m, dev = cv2.meanStdDev(SerialGray)
+        ret, thresh = cv2.threshold(SerialGray, m[0][0] - 0.5*dev[0][0], 255, cv2.THRESH_BINARY_INV)
+        # Padding
+        thresh = padding(thresh)
+        # Finding countours
+        contours,hierachy=cv2.findContours(thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        listboxmax,listboxmin = getBoundingBox(contours)
+        bettetContours = removeBadContours(filename,image,thresh,listboxmax,listboxmin)
+        #Draw Bounding box
+        # image = drawBoundingbox(image,bettetContours)
+        # cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/ResultBoundingBox/'+filename,image)   
+splitCharFromSerialNo('/home/anlab/ANLAB/VisualCode/Contours/TestImage/InputSerialNum/')
 
-
-    # Inverse 
-    m, dev = cv2.meanStdDev(SerialGray)
-    ret, thresh = cv2.threshold(SerialGray, m[0][0] - 0.5*dev[0][0], 255, cv2.THRESH_BINARY_INV)
-    thresh_ori = thresh
-    # Padding
-    thresh = padding(thresh)
-    # Finding countours
-    contours,hierachy=cv2.findContours(thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-    listboxmax,listboxmin = getBoundingBox(contours)
-    bettetContours, multiChar = removeBadContours(image,thresh,listboxmax,listboxmin)
-    # image = drawBoundingbox(image,bettetContours)
-    cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/ResultBoundingBox/'+filename,image)   
-    # image = splitChar(image, multiChar)
-    # break
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
